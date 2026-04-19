@@ -1,68 +1,50 @@
 import { NextResponse, type NextRequest } from "next/server";
 import { createServerClient } from "@supabase/ssr";
 
-const SUPABASE_URL = process.env.NEXT_PUBLIC_SUPABASE_URL ?? "";
-const SUPABASE_ANON_KEY = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY ?? "";
-
-// Detect placeholder / unconfigured credentials
-function isConfigured() {
-  return (
-    SUPABASE_URL.startsWith("https://") &&
-    !SUPABASE_URL.includes("placeholder") &&
-    SUPABASE_ANON_KEY.length > 40 &&
-    !SUPABASE_ANON_KEY.includes("placeholder")
-  );
-}
-
 export async function middleware(request: NextRequest) {
-  const pathname = request.nextUrl.pathname;
-
-  // If Supabase is not configured yet, only block dashboard/onboarding with a
-  // friendly redirect — allow everything else (landing, auth pages, etc.)
-  if (!isConfigured()) {
-    if (pathname.startsWith("/dashboard") || pathname.startsWith("/onboarding")) {
-      return NextResponse.redirect(new URL("/auth/login", request.url));
-    }
-    return NextResponse.next({ request });
-  }
-
   let supabaseResponse = NextResponse.next({ request });
 
-  const supabase = createServerClient(SUPABASE_URL, SUPABASE_ANON_KEY, {
-    cookies: {
-      getAll() {
-        return request.cookies.getAll();
+  const supabase = createServerClient(
+    process.env.NEXT_PUBLIC_SUPABASE_URL!,
+    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
+    {
+      cookies: {
+        getAll() {
+          return request.cookies.getAll();
+        },
+        setAll(cookiesToSet) {
+          cookiesToSet.forEach(({ name, value }) =>
+            request.cookies.set(name, value)
+          );
+          supabaseResponse = NextResponse.next({ request });
+          cookiesToSet.forEach(({ name, value, options }) =>
+            supabaseResponse.cookies.set(name, value, options)
+          );
+        },
       },
-      setAll(cookiesToSet) {
-        cookiesToSet.forEach(({ name, value }) =>
-          request.cookies.set(name, value)
-        );
-        supabaseResponse = NextResponse.next({ request });
-        cookiesToSet.forEach(({ name, value, options }) =>
-          supabaseResponse.cookies.set(name, value, options)
-        );
-      },
-    },
-  });
+    }
+  );
 
   try {
     const {
       data: { user },
     } = await supabase.auth.getUser();
 
+    const pathname = request.nextUrl.pathname;
+
     // Redirect logged-in users away from auth pages
     if (user && (pathname.startsWith("/auth/login") || pathname.startsWith("/auth/signup"))) {
       return NextResponse.redirect(new URL("/", request.url));
     }
 
-    // Protect dashboard / onboarding routes
+    // Protect dashboard routes
     if (pathname.startsWith("/dashboard") || pathname.startsWith("/onboarding")) {
       if (!user) {
         return NextResponse.redirect(new URL("/auth/login", request.url));
       }
 
-      // Role-based access control
-      if (pathname.startsWith("/dashboard/business") || pathname.startsWith("/dashboard/hustler")) {
+      // Check user role for role-specific routes
+      if (user && (pathname.startsWith("/dashboard/business") || pathname.startsWith("/dashboard/hustler"))) {
         const { data: userData } = await supabase
           .from("users")
           .select("user_type")
@@ -79,8 +61,8 @@ export async function middleware(request: NextRequest) {
         }
       }
     }
-  } catch {
-    // Supabase error (e.g. network issue) — allow request to continue
+  } catch (error) {
+    // If Supabase variables are missing, let the user pass but they will see errors on dashboard
   }
 
   return supabaseResponse;
