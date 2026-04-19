@@ -42,13 +42,13 @@ export default function BusinessOnboardingPage() {
       if (!user) throw new Error("Not authenticated");
 
       // Update user record
-      await supabase.from("users").update({
+      await (supabase.from("users") as any).update({
         user_type: "business",
         province: form.province,
       }).eq("id", user.id);
 
       // Create business profile
-      const { error } = await supabase.from("business_profiles").insert({
+      const { error } = await (supabase.from("business_profiles") as any).insert({
         user_id: user.id,
         company_name: form.company_name,
         industry: form.industry,

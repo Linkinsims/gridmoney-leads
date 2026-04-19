@@ -36,7 +36,7 @@ export default function HustlerOnboardingPage() {
       if (!user) throw new Error("Not authenticated");
 
       // Update user record
-      await supabase.from("users").update({
+      await (supabase.from("users") as any).update({
         user_type: "hustler",
         full_name: form.full_name,
         phone: form.phone,
@@ -44,7 +44,7 @@ export default function HustlerOnboardingPage() {
       }).eq("id", user.id);
 
       // Create hustler profile
-      const { error } = await supabase.from("hustler_profiles").insert({
+      const { error } = await (supabase.from("hustler_profiles") as any).insert({
         user_id: user.id,
         bio: form.bio,
       });

@@ -41,7 +41,7 @@ export async function POST(request: Request) {
     const businessProfile = campaign.business_profiles as { id: string; user_id: string; users: { email: string; full_name: string } | null } | null;
 
     // Insert lead (DB will reject duplicates via unique constraint)
-    const { data: lead, error } = await supabase.from("leads").insert({
+    const { data: leadData, error } = await (supabase.from("leads") as any).insert({
       campaign_id,
       hustler_id: hustler.id,
       business_id: businessProfile?.id || campaign.business_id,
@@ -54,6 +54,8 @@ export async function POST(request: Request) {
       platform_fee: calcPlatformFee(campaign.price_per_lead),
     }).select().single();
 
+    const lead = leadData as any;
+
     if (error) {
       if (error.code === "23505") {
         return NextResponse.json({ error: "This contact has already been submitted to this campaign" }, { status: 409 });
@@ -62,9 +64,8 @@ export async function POST(request: Request) {
     }
 
     // Increment total_leads_submitted
-    await supabase
-      .from("hustler_profiles")
-      .update({ total_leads_submitted: (await supabase.from("hustler_profiles").select("total_leads_submitted").eq("id", hustler.id).single()).data?.total_leads_submitted! + 1 })
+    await (supabase.from("hustler_profiles") as any)
+      .update({ total_leads_submitted: (await (supabase.from("hustler_profiles") as any).select("total_leads_submitted").eq("id", hustler.id).single()).data?.total_leads_submitted! + 1 })
       .eq("id", hustler.id);
 
     // Send notification to business

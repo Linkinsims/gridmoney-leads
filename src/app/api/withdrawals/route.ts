@@ -33,7 +33,7 @@ export async function POST(request: Request) {
     }
 
     // Create withdrawal request
-    const { error } = await supabase.from("withdrawal_requests").insert({
+    const { error } = await (supabase.from("withdrawal_requests") as any).insert({
       hustler_id: profile.id,
       amount,
       bank_name,
@@ -45,13 +45,12 @@ export async function POST(request: Request) {
     if (error) throw error;
 
     // Deduct from pending (move to processing)
-    await supabase
-      .from("hustler_profiles")
+    await (supabase.from("hustler_profiles") as any)
       .update({ pending_earnings: profile.pending_earnings - amount })
       .eq("id", profile.id);
 
     // Log transaction
-    await supabase.from("transactions").insert({
+    await (supabase.from("transactions") as any).insert({
       user_id: user.id,
       type: "withdrawal",
       amount,
