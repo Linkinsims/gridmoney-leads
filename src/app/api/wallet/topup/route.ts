@@ -13,13 +13,13 @@ export async function POST(request: Request) {
       return NextResponse.json({ error: "Minimum top-up is R100" }, { status: 400 });
     }
 
-    const { data } = await supabase
+    const { data: profileData } = await supabase
       .from("business_profiles")
       .select("id, users(email, full_name)")
       .eq("user_id", user.id)
       .single();
       
-    const profile = data as any;
+    const profile = profileData as any;
 
     if (!profile) return NextResponse.json({ error: "Business profile not found" }, { status: 404 });
 
