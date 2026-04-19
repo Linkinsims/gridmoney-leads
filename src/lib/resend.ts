@@ -1,6 +1,6 @@
 import { Resend } from "resend";
 
-const resend = new Resend(process.env.RESEND_API_KEY || "re_placeholder");
+const resend = new Resend(process.env.RESEND_API_KEY || "re_123456789");
 const FROM = process.env.RESEND_FROM_EMAIL || "noreply@gridmoneyleads.co.za";
 
 export async function sendNewLeadNotification({
