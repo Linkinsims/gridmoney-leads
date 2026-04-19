@@ -18,28 +18,31 @@ export async function PATCH(
 
     const leadId = params.id;
 
-    const { data: lead } = await supabase
+    const { data } = await supabase
       .from("leads")
       .select("*, hustler_profiles(user_id, users(email, full_name)), campaigns(title)")
       .eq("id", leadId)
       .single();
 
+    const lead = data as any;
+
     if (!lead) return NextResponse.json({ error: "Lead not found" }, { status: 404 });
     if (lead.status !== "pending") return NextResponse.json({ error: "Lead is not pending" }, { status: 400 });
 
-    const { data: businessProfile } = await supabase
+    const { data: businessData } = await supabase
       .from("business_profiles")
       .select("id")
       .eq("user_id", user.id)
       .single();
+
+    const businessProfile = businessData as any;
 
     if (!businessProfile || lead.business_id !== businessProfile.id) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 403 });
     }
 
     // Reject the lead
-    const { error } = await supabase
-      .from("leads")
+    const { error } = await (supabase.from("leads") as any)
       .update({ status: "rejected", rejection_reason: reason.trim(), reviewed_at: new Date().toISOString() })
       .eq("id", leadId);
 
@@ -53,7 +56,7 @@ export async function PATCH(
         title: "Lead not accepted",
         message: `Your lead for "${(lead.campaigns as { title: string } | null)?.title}" was not accepted. Reason: ${reason}`,
         type: "lead_rejected",
-      });
+      } as any);
 
       if (hustlerProfile.users?.email) {
         sendLeadRejectedNotification({

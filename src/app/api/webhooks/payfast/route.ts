@@ -39,15 +39,13 @@ export async function POST(request: Request) {
       .single();
 
     if (profile) {
-      await supabase
-        .from("business_profiles")
+      await (supabase.from("business_profiles") as any)
         .update({ wallet_balance: profile.wallet_balance + amount })
         .eq("id", businessId);
     }
 
     // Update transaction to completed
-    await supabase
-      .from("transactions")
+    await (supabase.from("transactions") as any)
       .update({ status: "completed" })
       .eq("reference", m_payment_id)
       .eq("user_id", userId);
@@ -58,7 +56,7 @@ export async function POST(request: Request) {
       title: "Wallet topped up! 💳",
       message: `R${amount.toFixed(2)} has been added to your wallet.`,
       type: "wallet_topped_up",
-    });
+    } as any);
 
     return new Response("OK", { status: 200 });
   } catch (err) {

@@ -26,12 +26,14 @@ export async function POST(request: Request) {
     if (!hustler) return NextResponse.json({ error: "Hustler profile not found" }, { status: 404 });
 
     // Get campaign
-    const { data: campaign } = await supabase
+    const { data: campaignData } = await supabase
       .from("campaigns")
       .select("*, business_profiles(id, user_id, users(email, full_name))")
       .eq("id", campaign_id)
       .eq("status", "active")
       .single();
+
+    const campaign = campaignData as any;
 
     if (!campaign) return NextResponse.json({ error: "Campaign not found or inactive" }, { status: 404 });
 
@@ -70,7 +72,7 @@ export async function POST(request: Request) {
       title: "New lead submitted",
       message: `A new lead was submitted for "${campaign.title}"`,
       type: "new_lead",
-    });
+    } as any);
 
     // Send email
     if (businessProfile?.users?.email) {

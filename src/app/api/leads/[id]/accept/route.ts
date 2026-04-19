@@ -14,28 +14,32 @@ export async function PATCH(
     const leadId = params.id;
 
     // Get lead with hustler user info
-    const { data: lead } = await supabase
+    const { data } = await supabase
       .from("leads")
       .select("*, hustler_profiles(user_id, users(email, full_name)), campaigns(title)")
       .eq("id", leadId)
       .single();
 
+    const lead = data as any;
+
     if (!lead) return NextResponse.json({ error: "Lead not found" }, { status: 404 });
     if (lead.status !== "pending") return NextResponse.json({ error: "Lead is not pending" }, { status: 400 });
 
     // Verify this business owns the lead
-    const { data: businessProfile } = await supabase
+    const { data: businessData } = await supabase
       .from("business_profiles")
       .select("id")
       .eq("user_id", user.id)
       .single();
+      
+    const businessProfile = businessData as any;
 
     if (!businessProfile || lead.business_id !== businessProfile.id) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 403 });
     }
 
     // Run atomic payout function
-    const { error } = await supabase.rpc("accept_lead", { lead_id: leadId });
+    const { error } = await supabase.rpc("accept_lead" as any, { lead_id: leadId } as any);
     if (error) throw error;
 
     // Send notification to hustler
@@ -46,7 +50,7 @@ export async function PATCH(
         title: "Lead accepted! 💰",
         message: `Your lead for "${(lead.campaigns as { title: string } | null)?.title}" was accepted. R${lead.payout_amount.toFixed(2)} added to your earnings.`,
         type: "lead_accepted",
-      });
+      } as any);
 
       // Send email
       if (hustlerProfile.users?.email) {
